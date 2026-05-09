@@ -1,0 +1,5 @@
+# Built-in modules (no installation needed)
+math
+
+# External dependencies
+numpy
