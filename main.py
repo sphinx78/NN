@@ -79,12 +79,13 @@ class Activation_Softmax:
             jacobian_matrix = np.diagflat(single_output) - np.dot(single_output, single_output.T)
             self.dinputs[index] = np.dot(jacobian_matrix, single_dvalues)
 class Layer_Dense:
+
     def __init__(self, input_n, neurons_n):
         self.weights = 0.1 * np.random.randn(input_n, neurons_n)
         self.biases = np.zeros((1, neurons_n))
     
     def forward(self, inputs):
-        self.inputs = inputs
+        self.inputs=inputs
         self.output = np.dot(inputs, self.weights) + self.biases
     
     def backward(self, dvalues):
