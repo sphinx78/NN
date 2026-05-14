@@ -94,19 +94,31 @@ class Layer_Dense:
         self.dinputs = np.dot(dvalues, self.weights.T)
 
 class Optimizer_SGD:
-    def __init__(self,learning_rate=1,decay=0):
+    def __init__(self,learning_rate=1,decay=0,momentum=0):
         self.learning_rate=learning_rate
         self.current_learning_rate=learning_rate
         self.decay=decay
         self.iterations=0
+        self.momentum=momentum
     
     def pre_update_params(self):
         if self.decay:
             self.current_learning_rate = self.learning_rate * (1 / (1 + self.decay * self.iterations))
 
     def update_params(self,layer):
-        layer.weights += -self.current_learning_rate * layer.dweights
-        layer.biases += -self.current_learning_rate * layer.dbiases
+        if self.momentum:
+            if not hasattr(layer, 'weight_momentums'):
+                layer.weight_momentums=np.zeros_like(layer.weights)
+                layer.biases_momentums=np.zeros_like(layer.biases)
+            weight_updates=self.momentum*layer.weight_momentums-self.current_learning_rate*layer.dweights
+            biases_updates=self.momentum*layer.biases_momentums-self.current_learning_rate*layer.dbiases
+            layer.weight_momentums = weight_updates      # missing
+            layer.biases_momentums  = biases_updates     # missing
+        else:
+            weight_updates=-self.current_learning_rate * layer.dweights
+            biases_updates=-self.current_learning_rate * layer.dbiases
+        layer.weights += weight_updates
+        layer.biases += biases_updates
 
     def post_update_params(self):
         self.iterations+=1
@@ -114,11 +126,11 @@ class Optimizer_SGD:
 
 X, y = create_data(100, 3)
 
-dense1 = Layer_Dense(2, 3)
+dense1 = Layer_Dense(2, 64)
 activation1 = Activation_ReLU()
-dense2 = Layer_Dense(3, 3)
+dense2 = Layer_Dense(64, 3)
 loss_activation = Activation_SoftmaxLoss_CategoricalCrossentropy()
-optimizer=Optimizer_SGD(decay=1e-3)
+optimizer=Optimizer_SGD(decay=1e-3,momentum=0.9)
 
 
 for epoch in range(10001):
