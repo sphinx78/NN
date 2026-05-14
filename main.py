@@ -93,7 +93,24 @@ class Layer_Dense:
         self.dbiases = np.sum(dvalues, axis=0, keepdims=True)
         self.dinputs = np.dot(dvalues, self.weights.T)
 
+class Optimizer_SGD:
+    def __init__(self,learning_rate=1,decay=0):
+        self.learning_rate=learning_rate
+        self.current_learning_rate=learning_rate
+        self.decay=decay
+        self.iterations=0
+    
+    def pre_update_params(self):
+        if self.decay:
+            self.current_learning_rate = self.learning_rate * (1 / (1 + self.decay * self.iterations))
 
+    def update_params(self,layer):
+        layer.weights += -self.current_learning_rate * layer.dweights
+        layer.biases += -self.current_learning_rate * layer.dbiases
+
+    def post_update_params(self):
+        self.iterations+=1
+    
 
 X, y = create_data(100, 3)
 
@@ -101,27 +118,31 @@ dense1 = Layer_Dense(2, 3)
 activation1 = Activation_ReLU()
 dense2 = Layer_Dense(3, 3)
 loss_activation = Activation_SoftmaxLoss_CategoricalCrossentropy()
+optimizer=Optimizer_SGD(decay=1e-3)
 
-dense1.forward(X)
-activation1.forward(dense1.output)
-dense2.forward(activation1.output)
-loss = loss_activation.forward(dense2.output, y)
 
-print(loss_activation.output[:5])
-print('loss:', loss)
+for epoch in range(10001):
+    dense1.forward(X)
+    activation1.forward(dense1.output)
+    dense2.forward(activation1.output)
+    loss = loss_activation.forward(dense2.output, y)
 
-predictions = np.argmax(loss_activation.output, axis=1)
-if len(y.shape) == 2:
-    y = np.argmax(y, axis=1)
-accuracy = np.mean(predictions == y)
-print('acc:', accuracy)
 
-loss_activation.backward(loss_activation.output, y)
-dense2.backward(loss_activation.dinputs)
-activation1.backward(dense2.dinputs)
-dense1.backward(activation1.dinputs)
+    predictions = np.argmax(loss_activation.output, axis=1)
+    if len(y.shape) == 2:
+        y = np.argmax(y, axis=1)
+    accuracy = np.mean(predictions == y)
 
-print(dense1.dweights)
-print(dense1.dbiases)
-print(dense2.dweights)
-print(dense2.dbiases)
+    if not epoch % 100:
+        print(f"epoch: {epoch},"+f"accuracy={accuracy: 3f}"+f"loss={loss: 3f}"+f"learning rate={optimizer.current_learning_rate}")
+
+    loss_activation.backward(loss_activation.output, y)
+    dense2.backward(loss_activation.dinputs)
+    activation1.backward(dense2.dinputs)
+    dense1.backward(activation1.dinputs)
+
+
+    optimizer.pre_update_params()
+    optimizer.update_params(dense1)
+    optimizer.update_params(dense2)
+    optimizer.post_update_params()
